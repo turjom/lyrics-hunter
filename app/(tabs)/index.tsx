@@ -1,75 +1,115 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, ActivityIndicator, FlatList, StyleSheet, Alert, Linking, } from 'react-native';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 
-export default function HomeScreen() {
+export default function App() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+type SongResult = {
+  title: string;
+  artist: string;
+};
+  const searchLyrics = async () => {
+    if (query.trim().split(/\s+/).length < 6) {
+      Alert.alert('Validation Error', 'Please enter at least 6 consecutive words.');
+      return;
+    }
+
+    
+
+    setLoading(true);
+    setError('');
+    setResults([]);
+  
+
+    try {
+    const res = await fetch(`https://api.audd.io/findLyrics/?q=${encodeURIComponent(query)}&api_token=702abd6d70b4fef156c4da3cc0baa561`
+      );
+    const data = await res.json();
+    console.log("Full API response:", data);
+
+      if (data.error) {
+        setError(data.error.error_message || 'API error');
+      } else { setResults(data.result || []);
+    } 
+  } catch (err) {
+      setError('Something went wrong. Please check your connection.');
+    } finally {
+    setLoading(false);}
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+    <View style={styles.container}>
+      <Text style={styles.title}>🎵 Lyric Finder</Text>
+      <TextInput
+        placeholder="Enter at least 6 words from a song lyric"
+        value={query}
+        onChangeText={setQuery}
+        style={styles.input}
+      />
+
+      <Button title="SEARCH" onPress={searchLyrics} disabled={loading} />
+      {loading && <ActivityIndicator style={{ marginTop: 10 }} />}
+      {error !== '' && <Text style={styles.error}>{error}</Text>}
+    <FlatList<SongResult>
+        data={results}
+        keyExtractor={(item, index) => `${item.title}-${index}`}
+        renderItem={({ item }) => (
+          <View style={styles.result}>
+            <Text style={styles.song}>{item.title}</Text>
+            <Text style={styles.artist}>{item.artist}</Text>
+        </View>
+        )}
+    />
+    </View>
+);
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    padding: 20,
+    paddingTop: 60,
+    backgroundColor: '#ffffff', // ✅ Light background
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#000000', // ✅ Visible text
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 12,
+    color: '#000',
+    backgroundColor: '#f9f9f9', // ✅ Light input box
   },
+  error: {
+    color: 'red',
+    marginVertical: 10,
+    fontSize: 14,
+  },
+  result: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f0f0f0', // ✅ Light background for list items
+  },
+  song: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#000000', // ✅ Visible title
+  },
+  artist: {
+    fontSize: 14,
+    color: '#555555', // ✅ Softer secondary text
+    marginTop: 4,
+  }
 });
